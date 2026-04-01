@@ -1,0 +1,124 @@
+{
+  "name": "General QA",
+  "id": "qaPatch429",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger_qa",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENROUTER_BASE_URL + '/chat/completions' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.OPENROUTER_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.OPENROUTER_MODEL }}\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Você é um assistente técnico para um estudante de Engenharia Eletrônica. Responda em português brasileiro, tom direto e informal. Se não souber, diga. Para questões técnicas prefira manter foco em fórmulas e código.\\n\\nNÃO REPITA A PERGUNTA. Vá direto ao ponto.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.original_message.text }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "http_openrouter",
+      "name": "OpenRouter API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        200,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// General QA — Parse QA node\n// Parses OpenRouter LLM response and sanitizes Markdown for Telegram\n\nfunction sanitizeMd(text) {\n  let t = String(text);\n  // Ensure bold markers (*) are properly paired\n  const stars = (t.match(/(?<!\\\\)\\*/g) || []);\n  if (stars.length % 2 !== 0) {\n    // Find the last unpaired * and escape it\n    const lastIdx = t.lastIndexOf('*');\n    t = t.substring(0, lastIdx) + '\\\\*' + t.substring(lastIdx + 1);\n  }\n  // Ensure italic markers (_) are properly paired\n  const underscores = (t.match(/(?<!\\\\)_/g) || []);\n  if (underscores.length % 2 !== 0) {\n    const lastIdx = t.lastIndexOf('_');\n    t = t.substring(0, lastIdx) + '\\\\_' + t.substring(lastIdx + 1);\n  }\n  // Ensure code markers (`) are properly paired (ignore triple backticks)\n  const singles = (t.match(/(?<!`)(?<!\\\\)`(?!`)/g) || []);\n  if (singles.length % 2 !== 0) {\n    const lastIdx = t.lastIndexOf('`');\n    t = t.substring(0, lastIdx) + '\\\\`' + t.substring(lastIdx + 1);\n  }\n  // Escape unmatched [ without ]\n  t = t.replace(/\\[(?![^\\]]*\\])/g, '\\\\[');\n  return t;\n}\n\nconst data = $input.first().json;\nif (!data.choices || data.choices.length === 0) {\n  const errMsg = data.error && data.error.message ? data.error.message : 'Erro desconhecido';\n  return [{ json: { text: `⚠️ Erro no OpenRouter: ${errMsg}` } }];\n}\nconst raw = data.choices[0].message.content;\nreturn [{ json: { text: sanitizeMd(raw) } }];"
+      },
+      "id": "parse_qa",
+      "name": "Parse QA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "appendAttribution": false
+        }
+      },
+      "id": "telegram_qa",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "Yq8E9uV5gI8Zm2Gq",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "OpenRouter API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter API": {
+      "main": [
+        [
+          {
+            "node": "Parse QA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse QA": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

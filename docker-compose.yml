@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - N8N_PROXY_HOPS=${N8N_PROXY_HOPS}
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=${N8N_EXECUTIONS_DATA_SAVE_ON_SUCCESS}
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=${N8N_EXECUTIONS_DATA_SAVE_ON_ERROR}
+      - N8N_LOG_LEVEL=${N8N_LOG_LEVEL}
+      - N8N_HOST=${N8N_HOST}
+      - WEBHOOK_URL=${N8N_PROTOCOL}://${N8N_HOST}/
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - TZ=${TZ}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - MOODLE_TOKEN=${MOODLE_TOKEN}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL}
+      - N8N_ENV_VARS_UI_DISPLAY=${N8N_ENV_VARS_UI_DISPLAY}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=${N8N_BLOCK_ENV_ACCESS_IN_NODE}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - assistant-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    restart: unless-stopped
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - assistant-net
+
+volumes:
+  n8n_data:
+  redis_data:
+
+networks:
+  assistant-net:
+    driver: bridge

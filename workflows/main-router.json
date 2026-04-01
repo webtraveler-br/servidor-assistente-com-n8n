@@ -1,0 +1,83 @@
+{
+  "name": "Main Router",
+  "id": "SvKKVIGPCc68OOyL",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "37fdbd79-a755-4c63-aaa7-a2bf08fe97eb",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "793baf87-8142-4a7b-b185-12a062d055bf",
+      "credentials": {
+        "telegramApi": {
+          "id": "Yq8E9uV5gI8Zm2Gq",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Main Router — command and keyword routing\n\nconst ALLOWED_CHAT_ID = parseInt($env.TELEGRAM_CHAT_ID, 10);\nconst message = $input.first().json.message || {};\nconst chatId = message.chat && message.chat.id;\n\nif (!Number.isFinite(ALLOWED_CHAT_ID) || chatId !== ALLOWED_CHAT_ID) {\n  return [];\n}\n\nconst rawText = String(message.text || '').trim();\nconst text = rawText.toLowerCase();\n\nconst WORKFLOW_IDS = {\n  'daily-briefing': 'KZPDjrKOkeo5VEgr',\n  'calendar-sync': 'calendarSync2468',\n  'aulas-sync': 'aulasSync24680',\n  'moodle-sync': 'moodleSync123456',\n  'classroom-sync': 'classroomSync789',\n  'general-qa': 'qaPatch429'\n};\n\nfunction hasAny(words) {\n  return words.some(word => text.includes(word));\n}\n\nlet route = 'general-qa';\n\nif (/^\\/briefing\\b/.test(text)) {\n  route = 'daily-briefing';\n} else if (/^\\/(calendar|calendario)\\b/.test(text)) {\n  route = 'calendar-sync';\n} else if (/^\\/(aulas|horario)\\b/.test(text)) {\n  route = 'aulas-sync';\n} else if (/^\\/moodle\\b/.test(text)) {\n  route = 'moodle-sync';\n} else if (/^\\/classroom\\b/.test(text)) {\n  route = 'classroom-sync';\n} else if (hasAny(['briefing', 'hoje', 'semana'])) {\n  route = 'daily-briefing';\n} else if (hasAny(['aulas', 'horario de aula', 'horario das aulas', 'faltas', 'frequencia'])) {\n  route = 'aulas-sync';\n} else if (hasAny(['moodle', 'ava', 'utfpr'])) {\n  route = 'moodle-sync';\n} else if (hasAny(['classroom', 'tarefa', 'atividade da turma'])) {\n  route = 'classroom-sync';\n} else if (hasAny(['calendario', 'agenda', 'compromisso', 'evento'])) {\n  route = 'calendar-sync';\n}\n\nconst workflowId = WORKFLOW_IDS[route] || WORKFLOW_IDS['general-qa'];\n\nreturn [\n  {\n    json: {\n      route,\n      workflowId,\n      original_message: message\n    }\n  }\n];"
+      },
+      "id": "5de7e200-d401-4e1d-b3e7-dd9be16d83b7",
+      "name": "Router Logic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $json.workflowId }}",
+        "options": {}
+      },
+      "id": "e3c14a18-10dc-4bd9-a21e-6175c9bd83be",
+      "name": "Execute Sub-Workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Router Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Logic": {
+      "main": [
+        [
+          {
+            "node": "Execute Sub-Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

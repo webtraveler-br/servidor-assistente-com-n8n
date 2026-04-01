@@ -1,0 +1,19 @@
+# Secrets (local only)
+.env
+QWEN.md
+plano.md
+
+# Optional local export/dump files
+allwfs.json
+all_workflows.json
+workflows.json
+sun.json
+mon.json
+moodle_day.json
+moodle_test.json
+new-docker-compose.yml
+modified_router.json
+current_router.json
+router_fixed.json
+merged-briefing.json
+moodle-standalone.json

@@ -1,0 +1,125 @@
+{
+  "name": "Moodle Sync",
+  "id": "moodleSync123456",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger_moodle",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.MOODLE_URL + '/webservice/rest/server.php' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "wstoken",
+              "value": "={{ $env.MOODLE_TOKEN }}"
+            },
+            {
+              "name": "wsfunction",
+              "value": "core_calendar_get_calendar_upcoming_view"
+            },
+            {
+              "name": "moodlewsrestformat",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http_moodle",
+      "name": "Moodle API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Moodle Sync — Format Moodle events for Telegram\n\nfunction esc(t) { return String(t).replace(/([_*`\\[\\]])/g, '\\\\$1'); }\n\nconst TZ = 'America/Sao_Paulo';\nconst nowMs = Date.now();\nconst in48hMs = nowMs + 48 * 60 * 60 * 1000;\nconst rawEvents = Array.isArray($input.first().json?.events) ? $input.first().json.events : [];\n\nfunction dayKey(ms) {\n  const parts = new Intl.DateTimeFormat('pt-BR', {\n    timeZone: TZ,\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit'\n  }).formatToParts(new Date(ms));\n\n  const year = parts.find(p => p.type === 'year').value;\n  const month = parts.find(p => p.type === 'month').value;\n  const day = parts.find(p => p.type === 'day').value;\n  return `${year}-${month}-${day}`;\n}\n\nfunction formatDay(ms) {\n  return new Date(ms)\n    .toLocaleDateString('pt-BR', {\n      timeZone: TZ,\n      weekday: 'short',\n      day: '2-digit',\n      month: '2-digit'\n    })\n    .toUpperCase();\n}\n\nfunction formatTime(ms) {\n  return new Date(ms).toLocaleTimeString('pt-BR', {\n    timeZone: TZ,\n    hour: '2-digit',\n    minute: '2-digit'\n  });\n}\n\nconst todayKey = dayKey(nowMs);\n\nconst events = rawEvents\n  .map(event => {\n    if (!event || !event.timestart) return null;\n\n    const ms = Number(event.timestart) * 1000;\n    if (!Number.isFinite(ms) || ms < nowMs - 5 * 60 * 1000) return null;\n\n    const isToday = dayKey(ms) === todayKey;\n\n    let icon = '📌';\n    if (isToday) {\n      icon = '🔥';\n    } else if (ms <= in48hMs) {\n      icon = '⚠️';\n    }\n\n    return {\n      ms,\n      icon,\n      context: esc(event.course && event.course.shortname ? event.course.shortname.trim() : 'MOODLE'),\n      title: esc(event.name || 'Atividade sem titulo'),\n      day: formatDay(ms),\n      time: formatTime(ms),\n      isToday\n    };\n  })\n  .filter(Boolean)\n  .sort((a, b) => a.ms - b.ms);\n\nconst todayCount = events.filter(event => event.isToday).length;\nconst urgentCount = events.filter(event => event.ms > nowMs && event.ms <= in48hMs).length;\n\nlet message = '🎓 *Moodle — Proximos Itens*\\n\\n';\nmessage += '*📊 RESUMO*\\n';\nmessage += `• Total: *${events.length}*\\n`;\nmessage += `• Hoje: *${todayCount}*\\n`;\nmessage += `• Urgentes (<48h): *${urgentCount}*\\n\\n`;\n\nmessage += '*🗂️ AGENDA*\\n';\nif (events.length === 0) {\n  message += '😴 Nenhum item no periodo.';\n} else {\n  message += events\n    .map(event => {\n      const context = event.context;\n      const title = event.title;\n      return `• ${event.icon} *[${context}]* ${title}\\n  📅 ${event.day} as ${event.time}`;\n    })\n    .join('\\n\\n');\n}\n\nreturn [{ json: { text: message.trim() } }];"
+      },
+      "id": "format_moodle",
+      "name": "Format Moodle",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "appendAttribution": false
+        }
+      },
+      "id": "telegram_moodle",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "Yq8E9uV5gI8Zm2Gq",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Moodle API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moodle API": {
+      "main": [
+        [
+          {
+            "node": "Format Moodle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Moodle": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
