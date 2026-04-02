@@ -33,6 +33,12 @@ function formatDay(ms) {
     .toUpperCase();
 }
 
+function priorityLabel(isToday, ms) {
+  if (isToday) return 'HOJE';
+  if (ms <= in48hMs) return 'URGENTE';
+  return 'PROXIMO';
+}
+
 const todayKey = dayKey(nowMs);
 
 const upcoming = [];
@@ -56,16 +62,9 @@ allItems.forEach(item => {
 
     const isToday = dayKey(dueMs) === todayKey;
 
-    let icon = '📌';
-    if (isToday) {
-      icon = '🔥';
-    } else if (dueMs <= in48hMs) {
-      icon = '⚠️';
-    }
-
     upcoming.push({
       ms: dueMs,
-      icon,
+      priority: priorityLabel(isToday, dueMs),
       context: esc(courseName),
       title: esc(work.title || 'Tarefa sem titulo'),
       day: formatDay(dueMs),
@@ -80,21 +79,21 @@ upcoming.sort((a, b) => a.ms - b.ms);
 const todayCount = upcoming.filter(item => item.isToday).length;
 const urgentCount = upcoming.filter(item => item.ms > nowMs && item.ms <= in48hMs).length;
 
-let message = '🏫 *Classroom — Proximas Entregas*\n\n';
-message += '*📊 RESUMO*\n';
+let message = '*Classroom - Proximas Entregas*\n\n';
+message += '*RESUMO*\n';
 message += `• Total: *${upcoming.length}*\n`;
 message += `• Hoje: *${todayCount}*\n`;
 message += `• Urgentes (<48h): *${urgentCount}*\n\n`;
 
-message += '*🗂️ AGENDA*\n';
+message += '*AGENDA*\n';
 if (upcoming.length === 0) {
-  message += '😴 Nenhuma entrega no periodo.';
+  message += 'Nenhuma entrega no periodo.';
 } else {
   message += upcoming
     .map(item => {
       const context = item.context;
       const title = item.title;
-      return `• ${item.icon} *[${context}]* ${title}\n  📅 ${item.day} as ${item.time}`;
+      return `• *[${item.priority}]* *[${context}]* ${title}\n  Quando: ${item.day} as ${item.time}`;
     })
     .join('\n\n');
 }

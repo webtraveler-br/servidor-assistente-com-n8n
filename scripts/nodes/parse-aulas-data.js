@@ -49,6 +49,15 @@ function toMinutes(hhmm) {
   return hh * 60 + mm;
 }
 
+function countSlotsInBlock(block) {
+  const start = Number(block?.slotStart);
+  const end = Number(block?.slotEnd);
+  if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+    return end - start + 1;
+  }
+  return 1;
+}
+
 function shiftHHmm(hhmm, deltaMinutes) {
   const total = ((toMinutes(hhmm) + deltaMinutes) % 1440 + 1440) % 1440;
   const hh = String(Math.floor(total / 60)).padStart(2, '0');
@@ -283,6 +292,8 @@ const todayClasses = blocks
   .filter(block => block.dayOffset === 0)
   .sort((a, b) => toMinutes(a.inicio) - toMinutes(b.inicio));
 
+const todayClassSlots = todayClasses.reduce((acc, block) => acc + countSlotsInBlock(block), 0);
+
 const nowOrUpcomingToday = todayClasses
   .filter(block => toMinutes(block.fim) >= nowInfo.nowMinutes)
   .sort((a, b) => toMinutes(a.inicio) - toMinutes(b.inicio));
@@ -358,6 +369,9 @@ return [{
     totals: {
       slots: slots.length,
       blocks: blocks.length,
+      todayBlocks: todayClasses.length,
+      todaySlots: todayClassSlots,
+      todayDisciplines: seenTodayDisciplines.size,
       today: todayClasses.length,
       next: 0
     },

@@ -30,7 +30,7 @@ function sanitizeMd(text) {
 const data = $input.first().json;
 if (!data.choices || data.choices.length === 0) {
   const errMsg = data.error && data.error.message ? data.error.message : 'Erro desconhecido';
-  return [{ json: { text: `⚠️ Erro no OpenRouter: ${errMsg}` } }];
+  return [{ json: { text: `Erro no OpenRouter: ${sanitizeMd(errMsg)}` } }];
 }
 const raw = data.choices[0].message.content;
 return [{ json: { text: sanitizeMd(raw) } }];

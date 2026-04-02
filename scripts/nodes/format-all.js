@@ -2,6 +2,10 @@
 
 function esc(t) { return String(t).replace(/([_*`\[\]])/g, '\\$1'); }
 
+function plural(value, one, many) {
+  return Number(value) === 1 ? one : many;
+}
+
 const TZ = 'America/Sao_Paulo';
 const nowMs = Date.now();
 const in14dMs = nowMs + 14 * 24 * 60 * 60 * 1000;
@@ -99,17 +103,16 @@ function buildEvent(ms, allDay, context, title) {
   const key = dayKey(ms);
   const isToday = key === todayKey;
 
-  let icon = '📌';
-  if (isToday) {
-    icon = '🔥';
-  } else if (ms <= in48hMs) {
-    icon = '⚠️';
-  }
+  const priority = isToday
+    ? 'HOJE'
+    : ms <= in48hMs
+      ? 'URGENTE'
+      : 'PROXIMO';
 
   return {
     ms,
     allDay,
-    icon,
+    priority,
     context,
     title,
     day: formatDay(ms),
@@ -118,20 +121,31 @@ function buildEvent(ms, allDay, context, title) {
   };
 }
 
-function formatAbsenceSnippet(absence) {
-  if (!absence) return '';
+function countSlotsInBlock(block) {
+  const start = Number(block?.slotStart);
+  const end = Number(block?.slotEnd);
+  if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+    return end - start + 1;
+  }
+  return 1;
+}
 
-  const faltas = Number.isFinite(Number(absence.faltas)) ? Number(absence.faltas) : null;
-  const limite = Number.isFinite(Number(absence.limiteFaltas)) ? Number(absence.limiteFaltas) : null;
-  if (!Number.isFinite(faltas) || !Number.isFinite(limite)) return '';
+function formatAbsenceStatus(absence) {
+  const faltas = Number.isFinite(Number(absence?.faltas)) ? Number(absence.faltas) : 0;
+  const limite = Number.isFinite(Number(absence?.limiteFaltas)) ? Number(absence.limiteFaltas) : null;
+  const restantes = Number.isFinite(Number(absence?.faltasRestantes)) ? Number(absence.faltasRestantes) : null;
 
-  let restantesInfo = '';
-  const restantes = Number.isFinite(Number(absence.faltasRestantes)) ? Number(absence.faltasRestantes) : null;
-  if (Number.isFinite(restantes)) {
-    restantesInfo = restantes >= 0 ? `, restam ${restantes}` : `, excedeu ${Math.abs(restantes)}`;
+  let status = Number.isFinite(limite)
+    ? `*${faltas}/${limite}*`
+    : `*${faltas}*`;
+
+  if (Number.isFinite(limite) && Number.isFinite(restantes)) {
+    status += restantes >= 0
+      ? ` | Restam *${restantes}*`
+      : ` | Excesso *${Math.abs(restantes)}*`;
   }
 
-  return ` | Faltas ${faltas}/${limite}${restantesInfo}`;
+  return status;
 }
 
 // 1) Google Calendar items (keep all-day only for today to reduce noise in briefing)
@@ -197,8 +211,7 @@ if (aulasData && aulasData.ok) {
     const cod = esc(block.cod || 'DISC');
     const disciplina = esc(block.disciplina || 'Aula');
     const sala = block.sala ? ` (Sala ${esc(block.sala)})` : '';
-    const faltasInfo = esc(formatAbsenceSnippet(block.absence));
-    const title = `${cod} - ${disciplina}${sala}${faltasInfo}`;
+    const title = `${cod} - ${disciplina}${sala}`;
 
     events.push(buildEvent(ms, false, 'AULAS', title));
   });
@@ -218,63 +231,63 @@ function renderItems(items) {
       const when = item.allDay
         ? `${item.day} — O DIA TODO`
         : `${item.day} as ${item.time}`;
-      return `• ${item.icon} *[${context}]* ${title}\n  📅 ${when}`;
+      return `• *[${item.priority}]* *[${context}]* ${title}\n  Quando: ${when}`;
     })
     .join('\n\n');
 }
 
-let message = `📘 *Briefing Integrado — ${formatDay(nowMs)}*\n\n`;
+let message = `*Briefing Integrado - ${formatDay(nowMs)}*\n\n`;
 
-message += '*📊 RESUMO*\n';
+message += '*RESUMO*\n';
 message += `• Total: *${events.length}*\n`;
 message += `• Hoje: *${todayItems.length}*\n`;
 message += `• Urgentes (<48h): *${urgentCount}*\n\n`;
 
 if (aulasData && aulasData.ok) {
-  const aulasHoje = Number(aulasData.totals && aulasData.totals.today ? aulasData.totals.today : 0);
+  const totals = aulasData.totals || {};
+  const todayClasses = Array.isArray(aulasData.todayClasses) ? aulasData.todayClasses : [];
   const absRows = Array.isArray(aulasData.todayAbsences) ? aulasData.todayAbsences : [];
-  message += `• Aulas hoje: *${aulasHoje}*\n`;
 
-  if (absRows.length > 0) {
-    message += '• Faltas: detalhadas por disciplina de hoje\n';
-  }
+  const aulasBlocos = Number.isFinite(Number(totals.todayBlocks))
+    ? Number(totals.todayBlocks)
+    : todayClasses.length;
+  const aulasSlots = Number.isFinite(Number(totals.todaySlots))
+    ? Number(totals.todaySlots)
+    : todayClasses.reduce((acc, block) => acc + countSlotsInBlock(block), 0);
+  const disciplinasHoje = Number.isFinite(Number(totals.todayDisciplines))
+    ? Number(totals.todayDisciplines)
+    : new Set(todayClasses.map(block => String(block.cod || block.disciplina || '').trim()).filter(Boolean)).size;
+
+  message += `• Aulas hoje: *${aulasSlots}* ${plural(aulasSlots, 'aula', 'aulas')} em *${aulasBlocos}* ${plural(aulasBlocos, 'bloco', 'blocos')}\n`;
+  message += `• Disciplinas: *${disciplinasHoje}*\n`;
 
   if (aulasData.hint && aulasData.hint.when === 'hoje') {
     message += `• Dica: arrumar *${esc(aulasData.hint.arrumarAt)}* | sair *${esc(aulasData.hint.sairAt)}*\n`;
   }
 
-  absRows.slice(0, 6).forEach(row => {
-    const cod = esc(row.cod || 'DISC');
-    const disciplina = esc(row.disciplina || 'Sem nome');
-    const faltas = Number.isFinite(Number(row.faltas)) ? Number(row.faltas) : 0;
-    const limite = Number.isFinite(Number(row.limiteFaltas)) ? Number(row.limiteFaltas) : null;
-    const restantes = Number.isFinite(Number(row.faltasRestantes)) ? Number(row.faltasRestantes) : null;
-
-    const limiteTexto = Number.isFinite(limite) ? `*${limite}*` : 'indisponivel';
-    let margemTexto = '';
-    if (Number.isFinite(restantes)) {
-      margemTexto = restantes >= 0
-        ? ` | Margem ate limite: *${restantes}*`
-        : ` | Acima do limite: *${Math.abs(restantes)}*`;
-    }
-
-    message += `• [${cod}] ${disciplina}\n`;
-    message += `  Faltas acumuladas: *${faltas}* | Limite: ${limiteTexto}${margemTexto}\n`;
-  });
+  if (absRows.length === 0) {
+    message += '• Frequencia: sem dados de faltas para hoje\n';
+  } else {
+    absRows.slice(0, 6).forEach(row => {
+      const cod = esc(row.cod || 'DISC');
+      const disciplina = esc(row.disciplina || 'Sem nome');
+      message += `• [${cod}] ${disciplina}: ${formatAbsenceStatus(row)}\n`;
+    });
+  }
 
   message += '\n';
 }
 
-message += '*🔥 HOJE*\n';
+message += '*HOJE*\n';
 if (todayItems.length === 0) {
-  message += '😴 Nenhum item para hoje.\n';
+  message += 'Nenhum item para hoje.\n';
 } else {
   message += `${renderItems(todayItems)}\n`;
 }
 
-message += '\n*🗂️ PROXIMOS DIAS*\n';
+message += '\n*PROXIMOS DIAS*\n';
 if (nextItems.length === 0) {
-  message += '😴 Nenhum item nos proximos dias.';
+  message += 'Nenhum item nos proximos dias.';
 } else {
   message += renderItems(nextItems);
 }

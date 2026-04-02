@@ -21,22 +21,59 @@ const todayClasses = Array.isArray(payload.todayClasses) ? payload.todayClasses 
 const todayAbsences = Array.isArray(payload.todayAbsences) ? payload.todayAbsences : [];
 const hint = payload.hint || null;
 
-function classTitle(block) {
-  const cod = esc(block.cod || 'DISC');
-  const disciplina = esc(block.disciplina || 'Sem nome');
-  return `*[${cod}]* ${disciplina}`;
+function countSlotsInBlock(block) {
+  const start = Number(block?.slotStart);
+  const end = Number(block?.slotEnd);
+  if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+    return end - start + 1;
+  }
+  return 1;
 }
 
-function classMeta(block) {
-  const room = block.sala ? ` | Sala: ${esc(block.sala)}` : '';
-  const prof = block.professor ? ` | Prof: ${esc(block.professor)}` : '';
-  return `${esc(block.dayLabel)} ${esc(block.inicio)}-${esc(block.fim)}${room}${prof}`;
+function plural(value, one, many) {
+  return Number(value) === 1 ? one : many;
 }
 
 function renderBlocks(blocks) {
   return blocks
-    .map(block => `• ${classTitle(block)}\n  ${classMeta(block)}`)
+    .map(block => {
+      const cod = esc(block.cod || 'DISC');
+      const disciplina = esc(block.disciplina || 'Sem nome');
+      const inicio = esc(block.inicio || '--:--');
+      const fim = esc(block.fim || '--:--');
+
+      const slots = countSlotsInBlock(block);
+      const details = [`${slots} ${plural(slots, 'aula', 'aulas')}`];
+
+      if (block.sala) {
+        details.push(`Sala ${esc(block.sala)}`);
+      }
+
+      if (block.professor) {
+        details.push(`Prof. ${esc(block.professor)}`);
+      }
+
+      return `• *${inicio}-${fim}* | *[${cod}]* ${disciplina}\n  ${details.join(' | ')}`;
+    })
     .join('\n\n');
+}
+
+function formatAbsenceStatus(row) {
+  const faltas = Number.isFinite(Number(row.faltas)) ? Number(row.faltas) : 0;
+  const limite = Number.isFinite(Number(row.limiteFaltas)) ? Number(row.limiteFaltas) : null;
+  const restantes = Number.isFinite(Number(row.faltasRestantes)) ? Number(row.faltasRestantes) : null;
+
+  let status = Number.isFinite(limite)
+    ? `Faltas: *${faltas}/${limite}*`
+    : `Faltas: *${faltas}*`;
+
+  if (Number.isFinite(limite) && Number.isFinite(restantes)) {
+    status += restantes >= 0
+      ? ` | Restam *${restantes}*`
+      : ` | Excesso *${Math.abs(restantes)}*`;
+  }
+
+  return status;
 }
 
 function renderAbsences(rows) {
@@ -44,47 +81,41 @@ function renderAbsences(rows) {
     .map(row => {
       const cod = esc(row.cod || 'DISC');
       const disciplina = esc(row.disciplina || 'Sem nome');
-      const faltas = Number.isFinite(Number(row.faltas)) ? Number(row.faltas) : 0;
-      const limite = Number.isFinite(Number(row.limiteFaltas)) ? Number(row.limiteFaltas) : null;
-      const restantes = Number.isFinite(Number(row.faltasRestantes)) ? Number(row.faltasRestantes) : null;
-
-      const limiteTexto = Number.isFinite(limite) ? `*${limite}*` : 'indisponivel';
-      let margemTexto = '';
-      if (Number.isFinite(restantes)) {
-        margemTexto = restantes >= 0
-          ? ` | Margem ate limite: *${restantes}*`
-          : ` | Acima do limite: *${Math.abs(restantes)}*`;
-      }
-
-      return `• *[${cod}]* ${disciplina}\n  Faltas acumuladas: *${faltas}* | Limite: ${limiteTexto}${margemTexto}`;
+      return `• *[${cod}]* ${disciplina}\n  ${formatAbsenceStatus(row)}`;
     })
     .join('\n\n');
 }
 
+const todayBlocks = Number.isFinite(Number(totals.todayBlocks))
+  ? Number(totals.todayBlocks)
+  : todayClasses.length;
+const todaySlots = Number.isFinite(Number(totals.todaySlots))
+  ? Number(totals.todaySlots)
+  : todayClasses.reduce((acc, block) => acc + countSlotsInBlock(block), 0);
+const todayDisciplines = Number.isFinite(Number(totals.todayDisciplines))
+  ? Number(totals.todayDisciplines)
+  : new Set(todayClasses.map(block => String(block.cod || block.disciplina || '').trim()).filter(Boolean)).size;
+
 let text = '*Aulas UTFPR*\n\n';
 text += '*RESUMO*\n';
 text += `• Curso: *${esc(student.curso || 'N/A')}*\n`;
-text += `• Aulas hoje: *${Number(totals.today || 0)}*\n`;
-text += `• Disciplinas hoje: *${todayAbsences.length}*\n`;
-
-if (todayAbsences.length > 0) {
-  text += '• Faltas: veja por disciplina na secao abaixo\n';
-}
+text += `• Hoje: *${todaySlots}* ${plural(todaySlots, 'aula', 'aulas')} em *${todayBlocks}* ${plural(todayBlocks, 'bloco', 'blocos')}\n`;
+text += `• Disciplinas: *${todayDisciplines}*\n`;
 
 if (hint && hint.when === 'hoje') {
-  text += `• Hoje: arrumar *${esc(hint.arrumarAt)}* | sair *${esc(hint.sairAt)}*\n`;
+  text += `• Dica: arrumar *${esc(hint.arrumarAt)}* | sair *${esc(hint.sairAt)}*\n`;
 }
 
-text += '\n*HOJE*\n';
+text += '\n*AULAS DE HOJE*\n';
 if (todayClasses.length === 0) {
   text += 'Nenhuma aula para hoje.\n';
 } else {
   text += `${renderBlocks(todayClasses)}\n`;
 }
 
-text += '\n*FALTAS DAS MATERIAS DE HOJE*\n';
+text += '\n*FREQUENCIA*\n';
 if (todayAbsences.length === 0) {
-  text += 'Nenhum registro de faltas para as disciplinas de hoje.';
+  text += 'Sem dados de faltas para hoje.';
 } else {
   text += renderAbsences(todayAbsences);
 }

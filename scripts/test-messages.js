@@ -183,22 +183,22 @@ suite('3. Formatação Moodle — dados reais que causaram o bug');
     }
   ];
 
-  let msg = '🎓 *Moodle — Proximos Itens*\n\n';
-  msg += '*📊 RESUMO*\n';
+  let msg = '*Moodle - Proximos Itens*\n\n';
+  msg += '*RESUMO*\n';
   msg += `• Total: *${mockMoodleEvents.length}*\n`;
   msg += '• Hoje: *0*\n';
   msg += '• Urgentes (<48h): *2*\n\n';
-  msg += '*🗂️ AGENDA*\n';
+  msg += '*AGENDA*\n';
   mockMoodleEvents.forEach(ev => {
     const course = esc(ev.course.shortname.trim());
     const name = esc(ev.name);
-    msg += `• ⚠️ *[${course}]* ${name}\n  📅 TER., 07/04 as 23:59\n\n`;
+    msg += `• *[URGENTE]* *[${course}]* ${name}\n  Quando: TER., 07/04 as 23:59\n\n`;
   });
 
   assertValidMd('Mensagem Moodle com dados reais', msg);
-  assert('Header novo do Moodle', msg.includes('🎓 *Moodle — Proximos Itens*'));
-  assert('Seção RESUMO no Moodle', msg.includes('*📊 RESUMO*'));
-  assert('Seção AGENDA no Moodle', msg.includes('*🗂️ AGENDA*'));
+  assert('Header novo do Moodle', msg.includes('*Moodle - Proximos Itens*'));
+  assert('Seção RESUMO no Moodle', msg.includes('*RESUMO*'));
+  assert('Seção AGENDA no Moodle', msg.includes('*AGENDA*'));
 }
 
 // ---------------------------------------------------------------------------
@@ -211,16 +211,16 @@ suite('4. Formatação Classroom — dados com underscore (o bug original)');
     { courseName: 'Prog[A]', title: 'Trabalho `código` final', dueStr: 'DOM., 05/04' }
   ];
 
-  let msg = '🏫 *Classroom — Proximas Entregas*\n\n';
-  msg += '*📊 RESUMO*\n';
+  let msg = '*Classroom - Proximas Entregas*\n\n';
+  msg += '*RESUMO*\n';
   msg += `• Total: *${mockClassroom.length}*\n`;
   msg += '• Hoje: *1*\n';
   msg += '• Urgentes (<48h): *2*\n\n';
-  msg += '*🗂️ AGENDA*\n';
+  msg += '*AGENDA*\n';
   mockClassroom.forEach(w => {
     const cName = esc(w.courseName);
     const wTitle = esc(w.title);
-    msg += `• ⚠️ *[${cName}]* ${wTitle}\n  📅 ${w.dueStr} as 23:59\n\n`;
+    msg += `• *[URGENTE]* *[${cName}]* ${wTitle}\n  Quando: ${w.dueStr} as 23:59\n\n`;
   });
 
   assertValidMd('Classroom com LISTA_02 (bug original)', msg);
@@ -228,9 +228,9 @@ suite('4. Formatação Classroom — dados com underscore (o bug original)');
   assert('Asteriscos em nome escapados', msg.includes('\\*Diferencial\\*'), 'Asteriscos não foram escapados');
   assert('Colchetes em nome escapados', msg.includes('Prog\\[A\\]'), 'Colchetes não foram escapados');
   assert('Backticks em título escapados', msg.includes('\\`código\\`'), 'Backticks não foram escapados');
-  assert('Header novo do Classroom', msg.includes('🏫 *Classroom — Proximas Entregas*'));
-  assert('Seção RESUMO no Classroom', msg.includes('*📊 RESUMO*'));
-  assert('Seção AGENDA no Classroom', msg.includes('*🗂️ AGENDA*'));
+  assert('Header novo do Classroom', msg.includes('*Classroom - Proximas Entregas*'));
+  assert('Seção RESUMO no Classroom', msg.includes('*RESUMO*'));
+  assert('Seção AGENDA no Classroom', msg.includes('*AGENDA*'));
 }
 
 // ---------------------------------------------------------------------------
@@ -238,34 +238,34 @@ suite('5. Daily Briefing — timeline unificada por prioridade');
 // ---------------------------------------------------------------------------
 {
   // Simula o formato atual padronizado
-  let message = '📘 *Briefing Integrado — TER., 31/03*\n\n';
-  message += '*📊 RESUMO*\n';
+  let message = '*Briefing Integrado - TER., 31/03*\n\n';
+  message += '*RESUMO*\n';
   message += '• Total: *8*\n';
   message += '• Hoje: *4*\n';
   message += '• Urgentes (<48h): *3*\n\n';
 
   // Hoje: mistura calendar + academic, tudo por horário
-  message += '*🔥 HOJE*\n';
-  message += `• 🔥 *[${esc('AGENDA')}]* ${esc('Exercícios - Cardio')}\n`;
-  message += `  📅 TER., 31/03 as 06:00\n\n`;
-  message += `• 🔥 *[${esc('PEAENG')}]* ${esc('Consolidação - Aula 03')}\n`;
-  message += `  📅 TER., 31/03 as 14:00\n`;
+  message += '*HOJE*\n';
+  message += `• *[HOJE]* *[${esc('AGENDA')}]* ${esc('Exercícios - Cardio')}\n`;
+  message += `  Quando: TER., 31/03 as 06:00\n\n`;
+  message += `• *[HOJE]* *[${esc('PEAENG')}]* ${esc('Consolidação - Aula 03')}\n`;
+  message += `  Quando: TER., 31/03 as 14:00\n`;
 
   // Próximos: unified, sorted by date
-  message += `\n*🗂️ PROXIMOS DIAS*\n`;
-  message += `• ⚠️ *[${esc('MECÂNICA GERAL - ELB51')}]* ${esc('LISTA_02')}\n`;
-  message += `  📅 QUA., 01/04 as 23:59\n\n`;
-  message += `• ⚠️ *[${esc('ELT74A')}]* ${esc('APS 3 - TURMA S01')}\n`;
-  message += `  📅 DOM., 05/04 as 23:59\n\n`;
-  message += `• 📌 *[${esc('Técnicas de Programação')}]* ${esc('Exercício_Lab_2.10')}\n`;
-  message += `  📅 TER., 07/04 as 23:59\n`;
+  message += `\n*PROXIMOS DIAS*\n`;
+  message += `• *[URGENTE]* *[${esc('MECÂNICA GERAL - ELB51')}]* ${esc('LISTA_02')}\n`;
+  message += `  Quando: QUA., 01/04 as 23:59\n\n`;
+  message += `• *[URGENTE]* *[${esc('ELT74A')}]* ${esc('APS 3 - TURMA S01')}\n`;
+  message += `  Quando: DOM., 05/04 as 23:59\n\n`;
+  message += `• *[PROXIMO]* *[${esc('Técnicas de Programação')}]* ${esc('Exercício_Lab_2.10')}\n`;
+  message += `  Quando: TER., 07/04 as 23:59\n`;
 
   assertValidMd('Briefing unificado completo', message);
 
-  assert('Header novo do Briefing', message.includes('📘 *Briefing Integrado —'));
-  assert('Seção RESUMO no Briefing', message.includes('*📊 RESUMO*'));
-  assert('Seção HOJE no Briefing', message.includes('*🔥 HOJE*'));
-  assert('Seção PROXIMOS DIAS no Briefing', message.includes('*🗂️ PROXIMOS DIAS*'));
+  assert('Header novo do Briefing', message.includes('*Briefing Integrado -'));
+  assert('Seção RESUMO no Briefing', message.includes('*RESUMO*'));
+  assert('Seção HOJE no Briefing', message.includes('*HOJE*'));
+  assert('Seção PROXIMOS DIAS no Briefing', message.includes('*PROXIMOS DIAS*'));
 
   // Verificar formato unificado: sem seções por fonte
   assert('Sem seção separada de Moodle', !message.includes('ENTREGAS & PROVAS'), 'Ainda tem header Moodle separado');
@@ -285,70 +285,70 @@ suite('6. Cenários de dados vazios');
 {
   // Moodle sem eventos
   const emptyMoodle = [
-    '🎓 *Moodle — Proximos Itens*',
+    '*Moodle - Proximos Itens*',
     '',
-    '*📊 RESUMO*',
+    '*RESUMO*',
     '• Total: *0*',
     '• Hoje: *0*',
     '• Urgentes (<48h): *0*',
     '',
-    '*🗂️ AGENDA*',
-    '😴 Nenhum item no periodo.'
+    '*AGENDA*',
+    'Nenhum item no periodo.'
   ].join('\n');
   assertValidMd('Moodle sem eventos', emptyMoodle);
 
   // Classroom sem cursos
   const emptyCourses = [
-    '🏫 *Classroom — Proximas Entregas*',
+    '*Classroom - Proximas Entregas*',
     '',
-    '*📊 RESUMO*',
+    '*RESUMO*',
     '• Total: *0*',
     '• Hoje: *0*',
     '• Urgentes (<48h): *0*',
     '',
-    '*🗂️ AGENDA*',
-    '😴 Nenhuma entrega no periodo.'
+    '*AGENDA*',
+    'Nenhuma entrega no periodo.'
   ].join('\n');
   assertValidMd('Classroom sem cursos', emptyCourses);
 
   // Classroom sem entregas
   const emptyWork = [
-    '🏫 *Classroom — Proximas Entregas*',
+    '*Classroom - Proximas Entregas*',
     '',
-    '*📊 RESUMO*',
+    '*RESUMO*',
     '• Total: *0*',
     '• Hoje: *0*',
     '• Urgentes (<48h): *0*',
     '',
-    '*🗂️ AGENDA*',
-    '😴 Nenhuma entrega no periodo.'
+    '*AGENDA*',
+    'Nenhuma entrega no periodo.'
   ].join('\n');
   assertValidMd('Classroom sem entregas', emptyWork);
 
   // Calendario sem eventos
   const emptyCalendar = [
-    '🗓️ *Calendario — Proximos 7 dias*',
+    '*Calendario - Proximos 7 dias*',
     '',
-    '*📊 RESUMO*',
+    '*RESUMO*',
     '• Total: *0*',
     '• Hoje: *0*',
     '• Proximos dias: *0*',
     '',
-    '*🗂️ AGENDA*',
-    '😴 Nenhum evento no periodo.'
+    '*AGENDA*',
+    'Nenhum evento no periodo.'
   ].join('\n');
   assertValidMd('Calendario sem eventos', emptyCalendar);
 
   // Briefing mínimo (sem eventos de nenhuma fonte)
-  let minBriefing = '📘 *Briefing Integrado — TER., 31/03*\n\n';
-  minBriefing += '*📊 RESUMO*\n';
+  let minBriefing = '*Briefing Integrado - TER., 31/03*\n\n';
+  minBriefing += '*RESUMO*\n';
   minBriefing += '• Total: *0*\n';
   minBriefing += '• Hoje: *0*\n';
   minBriefing += '• Urgentes (<48h): *0*\n\n';
-  minBriefing += '*🔥 HOJE*\n';
-  minBriefing += '😴 Nenhum item para hoje.\n';
-  minBriefing += '\n*🗂️ PROXIMOS DIAS*\n';
-  minBriefing += '😴 Nenhum item nos proximos dias.\n';
+  minBriefing += '*HOJE*\n';
+  minBriefing += 'Nenhum item para hoje.\n';
+  minBriefing += '\n*PROXIMOS DIAS*\n';
+  minBriefing += 'Nenhum item nos proximos dias.\n';
   assertValidMd('Briefing sem nenhum evento', minBriefing);
 }
 
@@ -394,7 +394,7 @@ suite('8. validateTelegramMd() — o próprio validador');
   assert('[ sem ] rejeitado', !validateTelegramMd('[aberto').valid);
   assert('Escapados aceitos', validateTelegramMd('\\*ok \\_ok \\`ok \\[ok').valid);
   assert('String vazia aceita', validateTelegramMd('').valid);
-  assert('Emojis aceitos', validateTelegramMd('📅 🎓 ⚠️ 📌 🔥 😴 🎉').valid);
+  assert('Unicode aceito', validateTelegramMd('Acao rapida com acentos e cedilha').valid);
 }
 
 // ---------------------------------------------------------------------------

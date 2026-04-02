@@ -40,6 +40,12 @@ function formatTime(ms) {
   });
 }
 
+function priorityLabel(isToday, ms) {
+  if (isToday) return 'HOJE';
+  if (ms <= in48hMs) return 'URGENTE';
+  return 'PROXIMO';
+}
+
 const todayKey = dayKey(nowMs);
 
 const events = rawEvents
@@ -51,16 +57,9 @@ const events = rawEvents
 
     const isToday = dayKey(ms) === todayKey;
 
-    let icon = '📌';
-    if (isToday) {
-      icon = '🔥';
-    } else if (ms <= in48hMs) {
-      icon = '⚠️';
-    }
-
     return {
       ms,
-      icon,
+      priority: priorityLabel(isToday, ms),
       context: esc(event.course && event.course.shortname ? event.course.shortname.trim() : 'MOODLE'),
       title: esc(event.name || 'Atividade sem titulo'),
       day: formatDay(ms),
@@ -74,21 +73,21 @@ const events = rawEvents
 const todayCount = events.filter(event => event.isToday).length;
 const urgentCount = events.filter(event => event.ms > nowMs && event.ms <= in48hMs).length;
 
-let message = '🎓 *Moodle — Proximos Itens*\n\n';
-message += '*📊 RESUMO*\n';
+let message = '*Moodle - Proximos Itens*\n\n';
+message += '*RESUMO*\n';
 message += `• Total: *${events.length}*\n`;
 message += `• Hoje: *${todayCount}*\n`;
 message += `• Urgentes (<48h): *${urgentCount}*\n\n`;
 
-message += '*🗂️ AGENDA*\n';
+message += '*AGENDA*\n';
 if (events.length === 0) {
-  message += '😴 Nenhum item no periodo.';
+  message += 'Nenhum item no periodo.';
 } else {
   message += events
     .map(event => {
       const context = event.context;
       const title = event.title;
-      return `• ${event.icon} *[${context}]* ${title}\n  📅 ${event.day} as ${event.time}`;
+      return `• *[${event.priority}]* *[${context}]* ${title}\n  Quando: ${event.day} as ${event.time}`;
     })
     .join('\n\n');
 }

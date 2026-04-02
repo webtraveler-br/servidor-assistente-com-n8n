@@ -60,6 +60,12 @@ function parseCalendarStart(start) {
   return null;
 }
 
+function priorityLabel(isToday, ms) {
+  if (isToday) return 'HOJE';
+  if (ms <= in24hMs) return 'URGENTE';
+  return 'PROXIMO';
+}
+
 const todayKey = getDayKey(nowMs);
 const in24hMs = nowMs + 24 * 60 * 60 * 1000;
 
@@ -72,17 +78,10 @@ const events = items
     const dayKey = getDayKey(parsed.ms);
     const isToday = dayKey === todayKey;
 
-    let icon = '📌';
-    if (isToday) {
-      icon = '🔥';
-    } else if (parsed.ms <= in24hMs) {
-      icon = '⚠️';
-    }
-
     return {
       ms: parsed.ms,
       allDay: parsed.allDay,
-      icon,
+      priority: priorityLabel(isToday, parsed.ms),
       title: esc(ev.summary || 'Sem titulo'),
       context: 'AGENDA',
       day: formatDay(parsed.ms),
@@ -95,15 +94,15 @@ const events = items
 
 const todayCount = events.filter(e => e.isToday).length;
 
-let message = '🗓️ *Calendario — Proximos 7 dias*\n\n';
-message += '*📊 RESUMO*\n';
+let message = '*Calendario - Proximos 7 dias*\n\n';
+message += '*RESUMO*\n';
 message += `• Total: *${events.length}*\n`;
 message += `• Hoje: *${todayCount}*\n`;
 message += `• Proximos dias: *${events.length - todayCount}*\n\n`;
 
-message += '*🗂️ AGENDA*\n';
+message += '*AGENDA*\n';
 if (events.length === 0) {
-  message += '😴 Nenhum evento no periodo.';
+  message += 'Nenhum evento no periodo.';
 } else {
   message += events
     .map(event => {
@@ -112,7 +111,7 @@ if (events.length === 0) {
       const when = event.allDay
         ? `${event.day} — O DIA TODO`
         : `${event.day} as ${event.time}`;
-      return `• ${event.icon} *[${context}]* ${title}\n  📅 ${when}`;
+      return `• *[${event.priority}]* *[${context}]* ${title}\n  Quando: ${when}`;
     })
     .join('\n\n');
 }
