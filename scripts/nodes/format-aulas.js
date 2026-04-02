@@ -20,12 +20,6 @@ const totals = payload.totals || {};
 const todayClasses = Array.isArray(payload.todayClasses) ? payload.todayClasses : [];
 const todayAbsences = Array.isArray(payload.todayAbsences) ? payload.todayAbsences : [];
 const hint = payload.hint || null;
-const absencesSummary = payload.absencesSummary || {
-  disciplines: 0,
-  totalFaltas: 0,
-  totalLimiteFaltas: 0,
-  totalRestantes: 0
-};
 
 function classTitle(block) {
   const cod = esc(block.cod || 'DISC');
@@ -54,21 +48,15 @@ function renderAbsences(rows) {
       const limite = Number.isFinite(Number(row.limiteFaltas)) ? Number(row.limiteFaltas) : null;
       const restantes = Number.isFinite(Number(row.faltasRestantes)) ? Number(row.faltasRestantes) : null;
 
-      let limiteTexto = 'limite indisponivel';
-      if (Number.isFinite(limite)) {
-        limiteTexto = `limite ${limite}`;
-      }
-
-      let restantesTexto = '';
+      const limiteTexto = Number.isFinite(limite) ? `*${limite}*` : 'indisponivel';
+      let margemTexto = '';
       if (Number.isFinite(restantes)) {
-        if (restantes >= 0) {
-          restantesTexto = ` | restam ${restantes}`;
-        } else {
-          restantesTexto = ` | excedeu ${Math.abs(restantes)}`;
-        }
+        margemTexto = restantes >= 0
+          ? ` | Margem ate limite: *${restantes}*`
+          : ` | Acima do limite: *${Math.abs(restantes)}*`;
       }
 
-      return `• *[${cod}]* ${disciplina}\n  Faltas: *${faltas}* | ${esc(limiteTexto)}${esc(restantesTexto)}`;
+      return `• *[${cod}]* ${disciplina}\n  Faltas acumuladas: *${faltas}* | Limite: ${limiteTexto}${margemTexto}`;
     })
     .join('\n\n');
 }
@@ -79,12 +67,8 @@ text += `• Curso: *${esc(student.curso || 'N/A')}*\n`;
 text += `• Aulas hoje: *${Number(totals.today || 0)}*\n`;
 text += `• Disciplinas hoje: *${todayAbsences.length}*\n`;
 
-if (absencesSummary.disciplines > 0) {
-  if (Number.isFinite(absencesSummary.totalLimiteFaltas) && absencesSummary.totalLimiteFaltas > 0) {
-    text += `• Faltas hoje: *${absencesSummary.totalFaltas}/${absencesSummary.totalLimiteFaltas}*\n`;
-  } else {
-    text += `• Faltas hoje: *${absencesSummary.totalFaltas}*\n`;
-  }
+if (todayAbsences.length > 0) {
+  text += '• Faltas: veja por disciplina na secao abaixo\n';
 }
 
 if (hint && hint.when === 'hoje') {
@@ -98,7 +82,7 @@ if (todayClasses.length === 0) {
   text += `${renderBlocks(todayClasses)}\n`;
 }
 
-text += '\n*FALTAS DE HOJE*\n';
+text += '\n*FALTAS DAS MATERIAS DE HOJE*\n';
 if (todayAbsences.length === 0) {
   text += 'Nenhum registro de faltas para as disciplinas de hoje.';
 } else {

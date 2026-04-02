@@ -232,18 +232,11 @@ message += `• Urgentes (<48h): *${urgentCount}*\n\n`;
 
 if (aulasData && aulasData.ok) {
   const aulasHoje = Number(aulasData.totals && aulasData.totals.today ? aulasData.totals.today : 0);
-  const absSummary = aulasData.absencesSummary || {};
   const absRows = Array.isArray(aulasData.todayAbsences) ? aulasData.todayAbsences : [];
   message += `• Aulas hoje: *${aulasHoje}*\n`;
 
-  if (Number(absSummary.disciplines || 0) > 0) {
-    const faltasTotal = Number(absSummary.totalFaltas || 0);
-    const limiteTotal = Number(absSummary.totalLimiteFaltas || 0);
-    if (limiteTotal > 0) {
-      message += `• Faltas hoje: *${faltasTotal}/${limiteTotal}*\n`;
-    } else {
-      message += `• Faltas hoje: *${faltasTotal}*\n`;
-    }
+  if (absRows.length > 0) {
+    message += '• Faltas: detalhadas por disciplina de hoje\n';
   }
 
   if (aulasData.hint && aulasData.hint.when === 'hoje') {
@@ -257,15 +250,16 @@ if (aulasData && aulasData.ok) {
     const limite = Number.isFinite(Number(row.limiteFaltas)) ? Number(row.limiteFaltas) : null;
     const restantes = Number.isFinite(Number(row.faltasRestantes)) ? Number(row.faltasRestantes) : null;
 
-    let rowInfo = `*${faltas}* falta(s)`;
-    if (Number.isFinite(limite)) {
-      rowInfo += ` / limite *${limite}*`;
-    }
+    const limiteTexto = Number.isFinite(limite) ? `*${limite}*` : 'indisponivel';
+    let margemTexto = '';
     if (Number.isFinite(restantes)) {
-      rowInfo += restantes >= 0 ? ` (restam *${restantes}*)` : ` (excedeu *${Math.abs(restantes)}*)`;
+      margemTexto = restantes >= 0
+        ? ` | Margem ate limite: *${restantes}*`
+        : ` | Acima do limite: *${Math.abs(restantes)}*`;
     }
 
-    message += `• [${cod}] ${disciplina}: ${rowInfo}\n`;
+    message += `• [${cod}] ${disciplina}\n`;
+    message += `  Faltas acumuladas: *${faltas}* | Limite: ${limiteTexto}${margemTexto}\n`;
   });
 
   message += '\n';
