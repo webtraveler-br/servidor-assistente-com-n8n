@@ -18,8 +18,6 @@ if (!payload.ok) {
 const student = payload.student || {};
 const totals = payload.totals || {};
 const todayClasses = Array.isArray(payload.todayClasses) ? payload.todayClasses : [];
-const nextClasses = Array.isArray(payload.nextClasses) ? payload.nextClasses : [];
-const allBlocks = Array.isArray(payload.allBlocks) ? payload.allBlocks : [];
 const todayAbsences = Array.isArray(payload.todayAbsences) ? payload.todayAbsences : [];
 const hint = payload.hint || null;
 const absencesSummary = payload.absencesSummary || {
@@ -79,7 +77,6 @@ let text = '*Aulas UTFPR*\n\n';
 text += '*RESUMO*\n';
 text += `• Curso: *${esc(student.curso || 'N/A')}*\n`;
 text += `• Aulas hoje: *${Number(totals.today || 0)}*\n`;
-text += `• Proximas aulas: *${Number(totals.next || 0)}*\n`;
 text += `• Disciplinas hoje: *${todayAbsences.length}*\n`;
 
 if (absencesSummary.disciplines > 0) {
@@ -99,15 +96,6 @@ if (todayClasses.length === 0) {
   text += 'Nenhuma aula para hoje.\n';
 } else {
   text += `${renderBlocks(todayClasses)}\n`;
-}
-
-text += '\n*PROXIMAS AULAS*\n';
-if (nextClasses.length > 0) {
-  text += `${renderBlocks(nextClasses)}\n`;
-} else if (allBlocks.length > 0) {
-  text += 'Sem aulas futuras na grade desta semana.\n';
-} else {
-  text += 'Nenhuma aula encontrada na grade.\n';
 }
 
 text += '\n*FALTAS DE HOJE*\n';

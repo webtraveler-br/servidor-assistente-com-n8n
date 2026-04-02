@@ -230,10 +230,19 @@ function parseBoletimPayload(payload) {
   return map;
 }
 
+function collectRowsFromItems(nodeName) {
+  return $items(nodeName).flatMap(item => {
+    const json = item?.json;
+    if (Array.isArray(json)) return json;
+    if (json && typeof json === 'object') return [json];
+    return [];
+  });
+}
+
 const authPayload = $items('UTFPR Auth')[0]?.json || {};
 const selectedCourse = $items('Select UTFPR Course')[0]?.json || {};
-const horarioPayload = $items('UTFPR Horario')[0]?.json || [];
-const boletimPayload = $items('UTFPR Boletim')[0]?.json || [];
+const horarioPayload = collectRowsFromItems('UTFPR Horario');
+const boletimPayload = collectRowsFromItems('UTFPR Boletim');
 
 if (!selectedCourse.ok) {
   const detail = String(selectedCourse.detail || authPayload.message || authPayload.error || '').trim();
@@ -273,19 +282,6 @@ blocks.sort((a, b) => {
 const todayClasses = blocks
   .filter(block => block.dayOffset === 0)
   .sort((a, b) => toMinutes(a.inicio) - toMinutes(b.inicio));
-
-const futureBlocks = blocks
-  .filter(block => block.dayOffset > 0)
-  .sort((a, b) => {
-    if (a.dayOffset !== b.dayOffset) return a.dayOffset - b.dayOffset;
-    return toMinutes(a.inicio) - toMinutes(b.inicio);
-  });
-
-let nextClasses = [];
-if (futureBlocks.length > 0) {
-  const nextDayOffset = futureBlocks[0].dayOffset;
-  nextClasses = futureBlocks.filter(block => block.dayOffset === nextDayOffset);
-}
 
 const nowOrUpcomingToday = todayClasses
   .filter(block => toMinutes(block.fim) >= nowInfo.nowMinutes)
@@ -363,13 +359,13 @@ return [{
       slots: slots.length,
       blocks: blocks.length,
       today: todayClasses.length,
-      next: nextClasses.length
+      next: 0
     },
     hint,
     absencesSummary,
     todayAbsences,
     todayClasses,
-    nextClasses,
-    allBlocks: blocks
+    nextClasses: [],
+    allBlocks: todayClasses
   }
 }];
