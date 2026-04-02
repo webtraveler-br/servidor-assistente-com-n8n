@@ -46,7 +46,7 @@ help: ## Mostrar todos os comandos disponíveis
 	@echo "    make check        Rodar build + lint + test (sem deployar)"
 	@echo ""
 	@echo -e "$(BLUE)  Deploy:$(NC)"
-	@echo "    make deploy       Pipeline completo: build → lint → test → upload → restart"
+	@echo "    make deploy       Pipeline completo: build → lint → test → git pull → import → recreate"
 	@echo "    make deploy-fast  Deploy sem testes (emergência)"
 	@echo "    make dry-run      Simular deploy sem enviar ao servidor"
 	@echo ""
