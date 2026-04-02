@@ -274,6 +274,19 @@ const todayClasses = blocks
   .filter(block => block.dayOffset === 0)
   .sort((a, b) => toMinutes(a.inicio) - toMinutes(b.inicio));
 
+const futureBlocks = blocks
+  .filter(block => block.dayOffset > 0)
+  .sort((a, b) => {
+    if (a.dayOffset !== b.dayOffset) return a.dayOffset - b.dayOffset;
+    return toMinutes(a.inicio) - toMinutes(b.inicio);
+  });
+
+let nextClasses = [];
+if (futureBlocks.length > 0) {
+  const nextDayOffset = futureBlocks[0].dayOffset;
+  nextClasses = futureBlocks.filter(block => block.dayOffset === nextDayOffset);
+}
+
 const nowOrUpcomingToday = todayClasses
   .filter(block => toMinutes(block.fim) >= nowInfo.nowMinutes)
   .sort((a, b) => toMinutes(a.inicio) - toMinutes(b.inicio));
@@ -350,13 +363,13 @@ return [{
       slots: slots.length,
       blocks: blocks.length,
       today: todayClasses.length,
-      next: 0
+      next: nextClasses.length
     },
     hint,
     absencesSummary,
     todayAbsences,
     todayClasses,
-    nextClasses: [],
-    allBlocks: todayClasses
+    nextClasses,
+    allBlocks: blocks
   }
 }];
