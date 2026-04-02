@@ -47,6 +47,50 @@ const parameterPatches = {
       parameter: 'workflowId',
       value: '={{ $json.workflowId }}'
     }
+  ],
+  'aulas-sync.json': [
+    {
+      nodeId: 'utfpr_auth',
+      parameter: 'method',
+      value: 'POST'
+    },
+    {
+      nodeId: 'utfpr_dados',
+      parameter: 'method',
+      value: 'GET'
+    },
+    {
+      nodeId: 'utfpr_horario',
+      parameter: 'method',
+      value: 'GET'
+    },
+    {
+      nodeId: 'utfpr_boletim',
+      parameter: 'method',
+      value: 'GET'
+    }
+  ],
+  'daily-briefing.json': [
+    {
+      nodeId: 'utfpr_auth_daily',
+      parameter: 'method',
+      value: 'POST'
+    },
+    {
+      nodeId: 'utfpr_dados_daily',
+      parameter: 'method',
+      value: 'GET'
+    },
+    {
+      nodeId: 'utfpr_horario_daily',
+      parameter: 'method',
+      value: 'GET'
+    },
+    {
+      nodeId: 'utfpr_boletim_daily',
+      parameter: 'method',
+      value: 'GET'
+    }
   ]
 };
 

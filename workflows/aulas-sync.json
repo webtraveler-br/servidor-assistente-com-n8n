@@ -20,7 +20,8 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { username: $env.UTFPR_PORTAL_USERNAME, password: $env.UTFPR_PORTAL_PASSWORD } }}",
-        "options": {}
+        "options": {},
+        "method": "POST"
       },
       "id": "utfpr_auth",
       "name": "UTFPR Auth",
@@ -44,7 +45,8 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "method": "GET"
       },
       "id": "utfpr_dados",
       "name": "UTFPR Dados",
@@ -81,7 +83,8 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "method": "GET"
       },
       "id": "utfpr_horario",
       "name": "UTFPR Horario",
@@ -105,7 +108,8 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "method": "GET"
       },
       "id": "utfpr_boletim",
       "name": "UTFPR Boletim",
